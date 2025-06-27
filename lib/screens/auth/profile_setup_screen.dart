@@ -1,7 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:finx_flutter/theme/app_colors.dart'; // Replace with your app name
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
+import 'package:finx_flutter/theme/app_colors.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -17,6 +21,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _phoneController = TextEditingController();
   XFile? _avatar;
 
+  bool _isSaving = false;
+
   Future<void> _pickAvatar() async {
     final ImagePicker picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
@@ -24,6 +30,43 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() {
         _avatar = picked;
       });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      String? avatarUrl;
+
+      if (_avatar != null) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_avatars/${user.uid}.jpg');
+
+        await storageRef.putFile(File(_avatar!.path));
+        avatarUrl = await storageRef.getDownloadURL();
+      }
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'name': _nameController.text.trim(),
+        'dob': _dobController.text.trim(),
+        'occupation': _occupationController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'email': user.email,
+        'avatarUrl': avatarUrl ?? '',
+      });
+
+      Navigator.pushReplacementNamed(context, '/main');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving profile: $e")),
+      );
+    } finally {
+      setState(() => _isSaving = false);
     }
   }
 
@@ -44,9 +87,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             Text(
               'Help us to know more about you!',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 20),
             Center(
@@ -61,15 +104,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   child: CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey[700],
-                    backgroundImage: _avatar != null
-                        ? FileImage(File(_avatar!.path))
-                        : null,
+                    backgroundImage:
+                        _avatar != null ? FileImage(File(_avatar!.path)) : null,
                     child: _avatar == null
-                        ? const Icon(
-                            Icons.camera_alt,
-                            size: 30,
-                            color: Colors.white,
-                          )
+                        ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -86,9 +124,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/main');
-              },
+              onPressed: _isSaving ? null : _saveProfile,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentColor,
                 minimumSize: const Size.fromHeight(50),
@@ -96,16 +132,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                "Done",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              child: _isSaving
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      "Done",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
             ),
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/main');
-              },
+              onPressed: () => Navigator.pushReplacementNamed(context, '/main'),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.accentColor, width: 1.5),
                 minimumSize: const Size.fromHeight(50),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'theme/app_colors.dart'; // ✅ Add this line
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; 
+import 'theme/app_colors.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/main_tab_view.dart';
@@ -9,7 +11,12 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/profile_setup_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -23,14 +30,13 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.primaryGradientStart,
-        colorScheme:
-            ColorScheme.fromSwatch(
-              brightness: Brightness.dark,
-              primarySwatch: Colors.teal,
-            ).copyWith(
-              primary: AppColors.primaryGradientEnd,
-              secondary: AppColors.accentColor,
-            ),
+        colorScheme: ColorScheme.fromSwatch(
+          brightness: Brightness.dark,
+          primarySwatch: Colors.teal,
+        ).copyWith(
+          primary: AppColors.primaryGradientEnd,
+          secondary: AppColors.accentColor,
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.accentColor,
