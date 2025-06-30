@@ -1,10 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
 import 'package:finx_flutter/theme/app_colors.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -19,19 +15,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _dobController = TextEditingController();
   final _occupationController = TextEditingController();
   final _phoneController = TextEditingController();
-  XFile? _avatar;
 
   bool _isSaving = false;
-
-  Future<void> _pickAvatar() async {
-    final ImagePicker picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _avatar = picked;
-      });
-    }
-  }
 
   Future<void> _saveProfile() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -40,25 +25,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isSaving = true);
 
     try {
-      String? avatarUrl;
-
-      if (_avatar != null) {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('user_avatars/${user.uid}.jpg');
-
-        await storageRef.putFile(File(_avatar!.path));
-        avatarUrl = await storageRef.getDownloadURL();
-      }
-
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      final userData = {
         'name': _nameController.text.trim(),
         'dob': _dobController.text.trim(),
         'occupation': _occupationController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': user.email,
-        'avatarUrl': avatarUrl ?? '',
-      });
+        'avatarUrl': '', // Empty string placeholder
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(userData);
 
       Navigator.pushReplacementNamed(context, '/main');
     } catch (e) {
@@ -91,28 +70,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 20),
-            Center(
-              child: GestureDetector(
-                onTap: _pickAvatar,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.avatarRing, width: 3),
-                  ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey[700],
-                    backgroundImage:
-                        _avatar != null ? FileImage(File(_avatar!.path)) : null,
-                    child: _avatar == null
-                        ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
             const SizedBox(height: 30),
             _buildInput("Full Name", _nameController),
             _buildInput("Date of Birth", _dobController, hint: "DD/MM/YYYY"),
@@ -136,12 +93,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       "Done",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
             ),
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, '/main'),
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, '/main'),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.accentColor, width: 1.5),
                 minimumSize: const Size.fromHeight(50),

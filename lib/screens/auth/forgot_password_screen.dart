@@ -8,47 +8,54 @@ class ForgotPasswordScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final emailController = TextEditingController();
 
-    void resetPassword() async {
-      final email = emailController.text.trim();
-
-      if (email.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please enter your email")),
-        );
-        return;
-      }
-
-      try {
-        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password reset link sent to your email")),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${e.toString()}")),
-        );
-      }
-    }
-
     return Scaffold(
       appBar: AppBar(title: const Text("Forgot Password")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const Text("Enter your email to reset your password"),
+            const Text(
+              "Enter your email address below. We'll send you a password reset link.",
+              style: TextStyle(color: Colors.white),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: emailController,
-              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: "Email",
-                border: OutlineInputBorder(),
+                hintText: "example@email.com",
               ),
+              keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: resetPassword,
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Please enter an email")),
+                  );
+                  return;
+                }
+
+                try {
+                  await FirebaseAuth.instance
+                      .sendPasswordResetEmail(email: email);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Password reset email sent to $email"),
+                    ),
+                  );
+                  Navigator.pop(context); // Go back to login screen
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Error: ${e.toString()}"),
+                    ),
+                  );
+                }
+              },
               child: const Text("Send Reset Link"),
             ),
           ],

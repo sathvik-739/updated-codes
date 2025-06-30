@@ -1,68 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:finx_flutter/theme/app_colors.dart'; // ← Replace with your actual app name
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finx_flutter/theme/app_colors.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  Future<Map<String, dynamic>?> _getUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF0f1115),
         title: const Text("Profile"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Avatar with violet ring
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.avatarRing, width: 3),
-              ),
-              child: const CircleAvatar(
-                radius: 50,
-                backgroundColor: Color(0xFF1c1f26),
-                child: Icon(Icons.person, size: 48, color: Colors.white54),
-              ),
-            ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _getUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 16),
-            const Text(
-              "John Doe",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Software Engineer",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            const SizedBox(height: 32),
-            _infoRow(label: "Email", value: "john@doe.com"),
-            _infoRow(label: "Phone", value: "8123456789"),
-            _infoRow(label: "Date of Birth", value: "01/01/2000"),
-            const Spacer(),
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text("No profile data found.", style: TextStyle(color: Colors.white)));
+          }
 
-            // Log Out button with accent color
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentColor,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          final data = snapshot.data!;
+          final name = data['name'] ?? 'No Name';
+          final dob = data['dob'] ?? 'N/A';
+          final occupation = data['occupation'] ?? 'N/A';
+          final phone = data['phone'] ?? 'N/A';
+          final email = data['email'] ?? 'N/A';
+          final avatarUrl = data['avatarUrl'];
+
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // Avatar with ring
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.avatarRing, width: 3),
+                  ),
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundColor: const Color(0xFF1c1f26),
+                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                        ? NetworkImage(avatarUrl)
+                        : null,
+                    child: avatarUrl == null || avatarUrl.isEmpty
+                        ? const Icon(Icons.person, size: 48, color: Colors.white54)
+                        : null,
+                  ),
                 ),
-              ),
-              onPressed: () => Navigator.pushReplacementNamed(c, '/login'),
-              child: const Text("Log Out"),
+
+                const SizedBox(height: 16),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  occupation,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                const SizedBox(height: 32),
+                _infoRow(label: "Email", value: email),
+                _infoRow(label: "Phone", value: phone),
+                _infoRow(label: "Date of Birth", value: dob),
+                const Spacer(),
+
+                // Log Out button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentColor,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pushReplacementNamed(context, '/login');
+                  },
+                  child: const Text("Log Out"),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
