@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finx_flutter/theme/app_colors.dart';
+import 'package:flutter/services.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -31,7 +32,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'occupation': _occupationController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': user.email,
-        'avatarUrl': '', // Empty string placeholder
+        'avatarUrl': '',
       };
 
       await FirebaseFirestore.instance
@@ -41,9 +42,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
       Navigator.pushReplacementNamed(context, '/main');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving profile: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error saving profile: $e")));
     } finally {
       setState(() => _isSaving = false);
     }
@@ -66,9 +67,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             Text(
               'Help us to know more about you!',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 30),
             _buildInput("Full Name", _nameController),
@@ -93,14 +94,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       "Done",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
             ),
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, '/main'),
+              onPressed: () => Navigator.pushReplacementNamed(context, '/main'),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.accentColor, width: 1.5),
                 minimumSize: const Size.fromHeight(50),
@@ -129,6 +131,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     String? hint,
     TextInputType? keyboardType,
   }) {
+    final isPhoneField = label.toLowerCase().contains("phone");
+    final isDOBField = label == "Date of Birth";
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -143,7 +148,46 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          keyboardType: keyboardType,
+          keyboardType: keyboardType ?? TextInputType.text,
+          readOnly: isDOBField,
+          onTap: isDOBField
+              ? () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime(2000),
+                    firstDate: DateTime(1900),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) {
+                      return Theme(
+                        data: ThemeData.dark().copyWith(
+                          colorScheme: const ColorScheme.dark(
+                            primary: Colors.pinkAccent,
+                            onPrimary: Colors.white,
+                            surface: Color(0xff1c1f26),
+                            onSurface: Colors.white,
+                          ),
+                          dialogBackgroundColor: const Color(0xff0f1115),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+
+                  if (pickedDate != null) {
+                    final formattedDate =
+                        "${pickedDate.day.toString().padLeft(2, '0')}/"
+                        "${pickedDate.month.toString().padLeft(2, '0')}/"
+                        "${pickedDate.year}";
+                    controller.text = formattedDate;
+                  }
+                }
+              : null,
+          inputFormatters: isPhoneField
+              ? [
+                  LengthLimitingTextInputFormatter(10),
+                  FilteringTextInputFormatter.digitsOnly,
+                ]
+              : null,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: hint ?? label,

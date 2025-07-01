@@ -39,8 +39,9 @@ class ForgotPasswordScreen extends StatelessWidget {
                 }
 
                 try {
-                  await FirebaseAuth.instance
-                      .sendPasswordResetEmail(email: email);
+                  await FirebaseAuth.instance.sendPasswordResetEmail(
+                    email: email,
+                  );
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -50,9 +51,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   Navigator.pop(context); // Go back to login screen
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Error: ${e.toString()}"),
-                    ),
+                    SnackBar(content: Text("Error: ${e.toString()}")),
                   );
                 }
               },

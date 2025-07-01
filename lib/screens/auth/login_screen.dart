@@ -13,6 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool isLoading = false;
+  bool _isPasswordObscure = true;
 
   void loginUser() async {
     final email = emailController.text.trim();
@@ -33,12 +34,11 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
-      // Navigate to main screen after successful login
       Navigator.pushReplacementNamed(context, '/main');
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed: ${e.message}")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Login failed: ${e.message}")));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Unexpected error: ${e.toString()}")),
@@ -61,10 +61,25 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: const InputDecoration(labelText: "Email"),
               keyboardType: TextInputType.emailAddress,
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: passwordController,
-              decoration: const InputDecoration(labelText: "Password"),
-              obscureText: true,
+              obscureText: _isPasswordObscure,
+              decoration: InputDecoration(
+                labelText: "Password",
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordObscure
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordObscure = !_isPasswordObscure;
+                    });
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             TextButton(

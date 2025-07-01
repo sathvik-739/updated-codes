@@ -10,7 +10,10 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
     return doc.data();
   }
 
@@ -29,7 +32,12 @@ class ProfileScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text("No profile data found.", style: TextStyle(color: Colors.white)));
+            return const Center(
+              child: Text(
+                "No profile data found.",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           final data = snapshot.data!;
@@ -58,7 +66,11 @@ class ProfileScreen extends StatelessWidget {
                         ? NetworkImage(avatarUrl)
                         : null,
                     child: avatarUrl == null || avatarUrl.isEmpty
-                        ? const Icon(Icons.person, size: 48, color: Colors.white54)
+                        ? const Icon(
+                            Icons.person,
+                            size: 48,
+                            color: Colors.white54,
+                          )
                         : null,
                   ),
                 ),
@@ -98,6 +110,20 @@ class ProfileScreen extends StatelessWidget {
                   },
                   child: const Text("Log Out"),
                 ),
+
+                const SizedBox(height: 10),
+
+                // Delete account button
+                TextButton(
+                  onPressed: () => _confirmDeleteAccount(context),
+                  child: const Text(
+                    "Delete this account",
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -125,5 +151,45 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Account"),
+        content: const Text(
+          "This will permanently delete your account and all your data. Are you sure?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => _deleteAccount(context),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+        await user.delete();
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error deleting account: $e")));
+    }
   }
 }

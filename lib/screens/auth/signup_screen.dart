@@ -14,6 +14,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final confirmController = TextEditingController();
 
   bool isLoading = false;
+  bool _isPasswordObscure = true;
+  bool _isConfirmObscure = true;
 
   void signUp() async {
     final email = emailController.text.trim();
@@ -28,9 +30,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
       return;
     }
 
@@ -42,12 +44,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: password,
       );
 
-      // Navigate to profile setup screen
       Navigator.pushReplacementNamed(context, '/profile-setup');
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Sign up failed: ${e.message}")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Sign up failed: ${e.message}")));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Unexpected error: ${e.toString()}")),
@@ -70,17 +71,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: const InputDecoration(labelText: "Email"),
               keyboardType: TextInputType.emailAddress,
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: passwordController,
-              decoration: const InputDecoration(labelText: "Password"),
-              obscureText: true,
+              obscureText: _isPasswordObscure,
+              decoration: InputDecoration(
+                labelText: "Password",
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordObscure
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordObscure = !_isPasswordObscure;
+                    });
+                  },
+                ),
+              ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: confirmController,
-              decoration: const InputDecoration(labelText: "Confirm Password"),
-              obscureText: true,
+              obscureText: _isConfirmObscure,
+              decoration: InputDecoration(
+                labelText: "Confirm Password",
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isConfirmObscure ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isConfirmObscure = !_isConfirmObscure;
+                    });
+                  },
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: isLoading ? null : signUp,
               child: isLoading
@@ -88,7 +117,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   : const Text("Sign Up"),
             ),
             TextButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, '/login'),
               child: const Text("Already have an account? Login"),
             ),
           ],
